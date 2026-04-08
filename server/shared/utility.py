@@ -1,7 +1,14 @@
+# ========= PYTHON =========
 import re
-from users.models import AuthType
-from rest_framework.validators import ValidationError
 import threading
+
+# ============== MODELS ==============
+from users.models import AuthType
+
+# ============== REST FRAMEWORK =========
+from rest_framework.validators import ValidationError
+
+# =============== DJNAGO ============
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 
