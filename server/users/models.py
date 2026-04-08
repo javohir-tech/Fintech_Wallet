@@ -55,7 +55,7 @@ class User(BaseModel, AbstractUser):
 
     def check_username(self):
         if not self.username:
-            temp_username = f"temp_username_{uuid.uuid4().__str__().strip("-")[-1]}"
+            temp_username = f"temp_username_{uuid.uuid4().__str__().split("-")[-1]}"
             while User.objects.filter(username=temp_username).exists():
                 temp_username = f"{temp_username}{randint(1, 9)}"
 
@@ -68,7 +68,7 @@ class User(BaseModel, AbstractUser):
 
     def check_user_password(self):
         if not self.password:
-            temp_password = f"temp_password_{uuid.uuid4().__str__().strip("-")[-1]}"
+            temp_password : str = f"temp_password_{uuid.uuid4().__str__().split("-")[-1]}"
             self.password = temp_password
 
     # ==================== CREATE TOKEN ====================
@@ -81,7 +81,7 @@ class User(BaseModel, AbstractUser):
 
     def password_hashing(self):
         if not is_hashing(self.password):
-            self.password = self.set_password(self.password)
+           self.set_password(self.password)
 
     def clean(self):
         self.check_username()
@@ -96,7 +96,9 @@ class User(BaseModel, AbstractUser):
             self.check_email()
 
         if self.password and not is_hashing(self.password):
-            self.password = self.set_password(self.password)
+           self.set_password(self.password)
+            
+        super().save(*args, **kwargs)
 
 
 EXPIRE_EMAIL = 2
