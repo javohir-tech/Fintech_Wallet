@@ -1,4 +1,6 @@
+# =============== REST FRAMEWORK =========
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # ================= MODELS ================
 from users.models import User, AuthType
@@ -77,3 +79,8 @@ class RegisterEmialorNumberSerializers(serializers.ModelSerializer):
             send_email(user.phone_number, code)
             
         return user
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data.update(instance.token())
+        return data

@@ -1,3 +1,6 @@
+# ================= MODELS =============
+from users.models import User
+
 # ================= Dango ===============
 from django.shortcuts import render
 
@@ -12,20 +15,11 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .serializers import RegisterEmialorNumberSerializers
 
 
-class RegisterEmialorNumberView(APIView):
+class RegisterEmialorNumberView(generics.CreateAPIView):
+    
+    queryset = User.objects.all()
+    serializer_class = RegisterEmialorNumberSerializers
     permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = RegisterEmialorNumberSerializers(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-        return Response(
-            {
-                "message": "oxshadi",
-            },
-            status=status.HTTP_200_OK,
-        )
 
 
 # Create your views here.
