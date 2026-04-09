@@ -1,11 +1,12 @@
 # =============== PYTHON =================
 import re
+
 # =============== REST FRAMEWORK =========
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # ================= MODELS ================
-from users.models import User, AuthType , AuthStatus
+from users.models import User, AuthType, AuthStatus
 
 # ================ SHARED ================
 from shared.utility import check_user_input, send_email
@@ -15,6 +16,9 @@ from django.contrib.auth import authenticate
 
 
 class SingUpSerializer(serializers.ModelSerializer):
+    """
+    user email yoki phone number bilan royhatdan otish
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -89,6 +93,8 @@ class SingUpSerializer(serializers.ModelSerializer):
 
 
 class VerifyCodeSerializer(serializers.Serializer):
+    """tastiqlsh kodini aniqlash"""
+
     code = serializers.CharField(max_length=4, min_length=4)
 
     def validate_code(self, value):
@@ -99,6 +105,7 @@ class VerifyCodeSerializer(serializers.Serializer):
 
 
 class UpdateUserSerializer(serializers.ModelSerializer):
+    """username va password ornatish"""
 
     class Meta:
         model = User
@@ -135,10 +142,16 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 
         return value
 
-    def update(self, instance : User, validated_data):
-       for attr , value in validated_data.items():
-           setattr(instance , attr , value)
-        
-       instance.auth_status = AuthStatus.DONE
-       instance.save() 
-       return instance
+    def update(self, instance: User, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.auth_status = AuthStatus.DONE
+        instance.save()
+        return instance
+
+    def to_representation(self, instance: User):
+        data = super().to_representation(instance)
+        data.update(instance.token())
+        data['auth_status'] = instance.auth_status
+        return data
