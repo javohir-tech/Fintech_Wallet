@@ -5,7 +5,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # ================= MODELS ================
-from users.models import User, AuthType
+from users.models import User, AuthType , AuthStatus
 
 # ================ SHARED ================
 from shared.utility import check_user_input, send_email
@@ -128,16 +128,17 @@ class UpdateUserSerializer(serializers.ModelSerializer):
     def validate_password(self, value):
         password_regex = r"^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
 
-        if re.match(password_regex, value):
+        if not re.match(password_regex, value):
             raise serializers.ValidationError(
                 "Password must be at least 8 characters, include one uppercase letter, one number, and one special character."
             )
 
         return value
 
-    def update(self, instance, validated_data):
-       for attr , value in validated_data.items() :
+    def update(self, instance : User, validated_data):
+       for attr , value in validated_data.items():
            setattr(instance , attr , value)
         
+       instance.auth_status = AuthStatus.DONE
        instance.save() 
        return instance
