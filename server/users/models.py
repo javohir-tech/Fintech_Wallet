@@ -11,9 +11,17 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.hashers import identify_hasher
+from django.core.validators import FileExtensionValidator
 
 # ==================== REST FRAMEWORK ==================
+from rest_framework.validators import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
+
+def validator_image_size(image):
+    max_image_mb = 2
+
+    if image.size > max_image_mb * 1024 * 1024:
+        raise ValidationError(f"Image size must be lass than {max_image_mb}")
 
 
 def is_hashing(password):
@@ -45,7 +53,14 @@ class User(BaseModel, AbstractUser):
     )
     email = models.CharField(max_length=128, null=True, unique=True)
     phone_number = models.CharField(max_length=128, null=True, unique=True)
-    avatar = models.ImageField(upload_to="users/avatars/", null=True)
+    avatar = models.ImageField(
+        upload_to="users/avatars/",
+        null=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=["jpg", "png", "jpeg", "webp"]),
+            validator_image_size,
+        ],
+    )
 
     # =============== CREATE CODE ===================
     def create_code(self, auth_type):
@@ -118,7 +133,7 @@ class UserConfirmation(BaseModel):
     is_confirmed = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ("user", "code" , "is_confirmed")
+        unique_together = ("user", "code", "is_confirmed")
 
     def save(self, *args, **kwargs):
         if self._state.adding:

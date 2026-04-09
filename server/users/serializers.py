@@ -3,17 +3,18 @@ import re
 
 # =============== REST FRAMEWORK =========
 from rest_framework import serializers
+from rest_framework.validators import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # ================= MODELS ================
 from users.models import User, AuthType, AuthStatus
 
 # ================ SHARED ================
-from shared.utility import check_user_input, send_email
+from shared.utility import check_user_input, send_email , validator_image_size
 
 # =============== DJANGO =================
 from django.contrib.auth import authenticate
-
+from django.core.validators import FileExtensionValidator
 
 class SingUpSerializer(serializers.ModelSerializer):
     """
@@ -153,5 +154,31 @@ class UpdateUserSerializer(serializers.ModelSerializer):
     def to_representation(self, instance: User):
         data = super().to_representation(instance)
         data.update(instance.token())
-        data['auth_status'] = instance.auth_status
+        data["auth_status"] = instance.auth_status
         return data
+
+
+class UploadAvatarSerializer(serializers.Serializer):
+
+    avatar = serializers.ImageField(
+        validators=[
+            FileExtensionValidator(allowed_extensions=("jpg", "jpeg", "png", "webp")) , 
+            validator_image_size
+        ]
+    )
+    
+    def update(self, instance : User, validated_data):
+        avatar = validated_data['avatar']
+        
+        instance.avatar = avatar
+        
+        instance.auth_status = AuthStatus.PHOTO_DONE
+        
+        instance.save()
+        
+        return instance
+    
+
+class LogOutSerializer():
+    pass
+        

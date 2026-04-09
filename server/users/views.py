@@ -15,7 +15,7 @@ from rest_framework.validators import ValidationError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 # ================ SERIALIZERS =========
-from .serializers import SingUpSerializer, VerifyCodeSerializer , UpdateUserSerializer
+from .serializers import SingUpSerializer, VerifyCodeSerializer , UpdateUserSerializer , UploadAvatarSerializer
 
 # ================ SHARED ================
 from shared.utility import send_email
@@ -102,6 +102,13 @@ class UpdateVerifyCode(APIView):
 class UpdateUserView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UpdateUserSerializer
+    
+    def get_object(self):
+        return self.request.user
+    
+class UploadAvatarView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UploadAvatarSerializer
     
     def get_object(self):
         return self.request.user

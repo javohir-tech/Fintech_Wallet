@@ -60,3 +60,9 @@ def send_email(email, code):
             "email_to": email,
         }
     )
+    
+def validator_image_size(image):
+    max_image_mb = 2
+
+    if image.size > max_image_mb * 1024 * 1024:
+        raise ValidationError(f"Image size must be lass than {max_image_mb}")
