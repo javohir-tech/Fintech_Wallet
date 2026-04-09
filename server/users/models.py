@@ -41,7 +41,7 @@ class User(BaseModel, AbstractUser):
         max_length=10, choices=AuthStatus.choices, default=AuthStatus.NEW
     )
     auth_type = models.CharField(
-        max_length=10   , choices=AuthStatus.choices, default=AuthType.VIA_EMAIL
+        max_length=10, choices=AuthStatus.choices, default=AuthType.VIA_EMAIL
     )
     email = models.CharField(max_length=128, null=True, unique=True)
     phone_number = models.CharField(max_length=128, null=True, unique=True)
@@ -68,7 +68,9 @@ class User(BaseModel, AbstractUser):
 
     def check_user_password(self):
         if not self.password:
-            temp_password : str = f"temp_password_{uuid.uuid4().__str__().split("-")[-1]}"
+            temp_password: str = (
+                f"temp_password_{uuid.uuid4().__str__().split("-")[-1]}"
+            )
             self.password = temp_password
 
     # ==================== CREATE TOKEN ====================
@@ -81,7 +83,7 @@ class User(BaseModel, AbstractUser):
 
     def password_hashing(self):
         if not is_hashing(self.password):
-           self.set_password(self.password)
+            self.set_password(self.password)
 
     def clean(self):
         self.check_username()
@@ -96,9 +98,12 @@ class User(BaseModel, AbstractUser):
             self.check_email()
 
         if self.password and not is_hashing(self.password):
-           self.set_password(self.password)
-            
+            self.set_password(self.password)
+
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.email
 
 
 EXPIRE_EMAIL = 2
@@ -111,6 +116,9 @@ class UserConfirmation(BaseModel):
     expired_time = models.DateTimeField()
     auth_type = models.CharField(max_length=10, choices=AuthType.choices)
     is_confirmed = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("user", "code")
 
     def save(self, *args, **kwargs):
         if self._state.adding:

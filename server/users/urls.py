@@ -1,7 +1,8 @@
 from django.urls import path
 # ============== VIEWS ============
-from .views import RegisterEmialorNumberView
+from .views import SingUpView , VerifyCodeView
 
 urlpatterns = [
-    path("singup/" , RegisterEmialorNumberView.as_view())    
+    path("singup/" , SingUpView.as_view()), 
+    path("verify/" , VerifyCodeView.as_view())
 ]

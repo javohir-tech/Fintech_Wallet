@@ -12,7 +12,7 @@ from shared.utility import check_user_input, send_email
 from django.contrib.auth import authenticate
 
 
-class RegisterEmialorNumberSerializers(serializers.ModelSerializer):
+class SingUpSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
