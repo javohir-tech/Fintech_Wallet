@@ -47,7 +47,7 @@ class Email:
         EmailThread(email).start()
 
 
-def send_email(email, code):
+def send_email(email: str, code: str):
     html_content = render_to_string(
         "email/verify_code.html", {"code": code, "to_email": email}
     )
@@ -60,9 +60,19 @@ def send_email(email, code):
             "email_to": email,
         }
     )
-    
+
+
 def validator_image_size(image):
     max_image_mb = 2
 
     if image.size > max_image_mb * 1024 * 1024:
         raise ValidationError(f"Image size must be lass than {max_image_mb}")
+
+
+def check_password(password:str):
+    password_regex = r"^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+
+    if not re.match(password_regex, password):
+        raise ValidationError(
+            "Password must be at least 8 characters, include one uppercase letter, one number, and onespecial character."
+        )

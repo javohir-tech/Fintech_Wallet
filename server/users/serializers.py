@@ -10,14 +10,19 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User, AuthType, AuthStatus
 
 # ================ SHARED ================
-from shared.utility import check_user_input, send_email, validator_image_size
+from shared.utility import (
+    check_user_input,
+    send_email,
+    validator_image_size,
+    check_password,
+)
 
 # =============== DJANGO =================
 from django.contrib.auth import authenticate
 from django.core.validators import FileExtensionValidator
 
 
-class SingUpSerializer(serializers.ModelSerializer):
+class SignUpSerializer(serializers.ModelSerializer):
     """
     user email yoki phone number bilan royhatdan otish
     """
@@ -135,12 +140,7 @@ class UpdateUserSerializer(serializers.ModelSerializer):
         return value
 
     def validate_password(self, value):
-        password_regex = r"^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
-
-        if not re.match(password_regex, value):
-            raise serializers.ValidationError(
-                "Password must be at least 8 characters, include one uppercase letter, one number, and one special character."
-            )
+        check_password(value)
 
         return value
 
@@ -194,7 +194,7 @@ class LoginSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "email_or_number", "password", "username", "avatar"]
         read_only_fields = ["id", "username", "avatar"]
-        extra_fields = {"password": {"write_only": True}}
+        extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
         email_or_number = data["email_or_number"]
@@ -206,6 +206,8 @@ class LoginSerializer(serializers.ModelSerializer):
             user = User.objects.filter(email=email_or_number).first()
         elif auth_type == AuthType.VIA_PHONE:
             user = User.objects.filter(phone_number=email_or_number).first()
+        else:
+            raise serializers.ValidationError("email or phone_number is Invalid")
 
         if user is None:
             raise serializers.ValidationError("User not found")
@@ -221,15 +223,42 @@ class LoginSerializer(serializers.ModelSerializer):
 
         return data
 
-    def validate_password(self, value):
-        password_regex = r"^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
 
-        if not re.match(password_regex, value):
-            raise serializers.ValidationError(
-                "Password must be at least 8 characters, include one uppercase letter, one number, and one special character."
-            )
+class ForgetPasswordSerializer(serializers.Serializer):
+    email_or_number = serializers.CharField(max_length=64)
 
+    def validate(self, data):
+        value = data["email_or_number"]
+        auth_type = check_user_input(value)
+
+        if auth_type == AuthType.VIA_EMAIL:
+            user: User = User.objects.filter(email=value).first()
+            self.is_user(user)
+            code = user.create_code(auth_type)
+            send_email(value, code)
+        elif auth_type == AuthType.VIA_PHONE:
+            user: User = User.objects.filter(phone_number=value).first()
+            self.is_user(user)
+            code = user.create_code(auth_type)
+            send_email(value, code)
+        else:
+            raise serializers.ValidationError("email or phone_number is Invalid")
+
+
+        data["user"] = user
+
+        return data
+
+    @staticmethod
+    def is_user(user: User | None):
+        if user is None:
+            raise serializers.ValidationError("user not found")
+
+
+class UpdatePasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(max_length=64)
+
+    def validate_new_password(self, value):
+        check_password(value)
         return value
 
-
-# class ForgetPasswordSerializer()

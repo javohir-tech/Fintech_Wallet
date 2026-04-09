@@ -17,21 +17,23 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 
 # ================ SERIALIZERS =========
 from .serializers import (
-    SingUpSerializer,
+    SignUpSerializer,
     VerifyCodeSerializer,
     UpdateUserSerializer,
     UploadAvatarSerializer,
-    LoginSerializer
+    LoginSerializer,
+    ForgetPasswordSerializer,
+    UpdatePasswordSerializer,
 )
 
 # ================ SHARED ================
 from shared.utility import send_email
 
 
-class SingUpView(generics.CreateAPIView):
+class SignUpView(generics.CreateAPIView):
 
     queryset = User.objects.all()
-    serializer_class = SingUpSerializer
+    serializer_class = SignUpSerializer
     permission_classes = [AllowAny]
 
 
@@ -69,7 +71,7 @@ class VerifyCodeView(APIView):
                 "data": {
                     "access_token": token["access_token"],
                     "refresh_token": token["refresh_token"],
-                    "auth_type": AuthStatus.VERIFIED,
+                    "auth_status": AuthStatus.VERIFIED,
                 },
             },
             status=status.HTTP_200_OK,
@@ -109,7 +111,7 @@ class UpdateVerifyCode(APIView):
 
 class UpdateUserView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UpdateUserSerializer
+    serializer_class = UpdateUserSerializer(partial=True)
 
     def get_object(self):
         return self.request.user
@@ -141,18 +143,55 @@ class LogOutView(APIView):
                 {"error": "Invalid token or token already blacklisted."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-            
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
-    
-    def post(self , request):
-        serializer = LoginSerializer(data = request.data)
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user:User = serializer.validated_data['user']
-        
+        user: User = serializer.validated_data["user"]
+
         token = user.token()
-        
-        return Response({**serializer.data , "tokens" : token})
+
+        return Response({**serializer.data, "tokens": token})
 
 
-# Create your views here.
+class ForgetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ForgetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user: User = serializer.validated_data["user"]
+
+        token = user.token()
+
+        return Response(
+            {
+                "success": True,
+                "message": "We have sent you a verification code",
+                "tokens": token,
+            }
+        )
+
+
+class UpdatePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = UpdatePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_password = serializer.validated_data["new_password"]
+        user: User = self.request.user
+
+        user.set_password(new_password)
+        user.save()
+        return Response(
+            {
+                "success": True,
+                "message": "Password successfuly update",
+            } ,status=status.HTTP_200_OK
+        )
