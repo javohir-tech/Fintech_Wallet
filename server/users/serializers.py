@@ -10,11 +10,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User, AuthType, AuthStatus
 
 # ================ SHARED ================
-from shared.utility import check_user_input, send_email , validator_image_size
+from shared.utility import check_user_input, send_email, validator_image_size
 
 # =============== DJANGO =================
 from django.contrib.auth import authenticate
 from django.core.validators import FileExtensionValidator
+
 
 class SingUpSerializer(serializers.ModelSerializer):
     """
@@ -144,12 +145,16 @@ class UpdateUserSerializer(serializers.ModelSerializer):
         return value
 
     def update(self, instance: User, validated_data):
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
 
-        instance.auth_status = AuthStatus.DONE
-        instance.save()
-        return instance
+        if instance.auth_status == AuthStatus.VERIFIED:
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+
+            instance.auth_status = AuthStatus.DONE
+            instance.save()
+            return instance
+
+        raise serializers.ValidationError("You are status not verified")
 
     def to_representation(self, instance: User):
         data = super().to_representation(instance)
@@ -162,23 +167,69 @@ class UploadAvatarSerializer(serializers.Serializer):
 
     avatar = serializers.ImageField(
         validators=[
-            FileExtensionValidator(allowed_extensions=("jpg", "jpeg", "png", "webp")) , 
-            validator_image_size
+            FileExtensionValidator(allowed_extensions=("jpg", "jpeg", "png", "webp")),
+            validator_image_size,
         ]
     )
-    
-    def update(self, instance : User, validated_data):
-        avatar = validated_data['avatar']
-        
-        instance.avatar = avatar
-        
-        instance.auth_status = AuthStatus.PHOTO_DONE
-        
-        instance.save()
-        
-        return instance
-    
 
-class LogOutSerializer():
-    pass
-        
+    def update(self, instance: User, validated_data):
+        avatar = validated_data["avatar"]
+
+        if instance.auth_status == AuthStatus.DONE:
+            instance.avatar = avatar
+            instance.auth_status = AuthStatus.PHOTO_DONE
+            instance.save()
+        else:
+            raise serializers.ValidationError(
+                "Auth Status Error . You are status not verifed"
+            )
+
+        return instance
+
+
+class LoginSerializer(serializers.ModelSerializer):
+    email_or_number = serializers.CharField(max_length=64)
+
+    class Meta:
+        model = User
+        fields = ["id", "email_or_number", "password", "username", "avatar"]
+        read_only_fields = ["id", "username", "avatar"]
+        extra_fields = {"password": {"write_only": True}}
+
+    def validate(self, data):
+        email_or_number = data["email_or_number"]
+        password = data["password"]
+
+        auth_type = check_user_input(email_or_number)
+
+        if auth_type == AuthType.VIA_EMAIL:
+            user = User.objects.filter(email=email_or_number).first()
+        elif auth_type == AuthType.VIA_PHONE:
+            user = User.objects.filter(phone_number=email_or_number).first()
+
+        if user is None:
+            raise serializers.ValidationError("User not found")
+
+        username = user.username
+
+        is_user = authenticate(username=username, password=password)
+
+        if is_user is None:
+            raise serializers.ValidationError("You are not registration")
+
+        data["user"] = is_user
+
+        return data
+
+    def validate_password(self, value):
+        password_regex = r"^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+
+        if not re.match(password_regex, value):
+            raise serializers.ValidationError(
+                "Password must be at least 8 characters, include one uppercase letter, one number, and one special character."
+            )
+
+        return value
+
+
+# class ForgetPasswordSerializer()

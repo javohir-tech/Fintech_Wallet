@@ -12,10 +12,17 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.validators import ValidationError
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 # ================ SERIALIZERS =========
-from .serializers import SingUpSerializer, VerifyCodeSerializer , UpdateUserSerializer , UploadAvatarSerializer
+from .serializers import (
+    SingUpSerializer,
+    VerifyCodeSerializer,
+    UpdateUserSerializer,
+    UploadAvatarSerializer,
+    LoginSerializer
+)
 
 # ================ SHARED ================
 from shared.utility import send_email
@@ -77,10 +84,10 @@ class UpdateVerifyCode(APIView):
 
         user: User = self.request.user
 
-        user_confirmation :bool = UserConfirmation.objects.filter(
+        user_confirmation: bool = UserConfirmation.objects.filter(
             user=user, expired_time__gt=timezone.now()
         ).exists()
-        
+
         if user_confirmation:
             raise ValidationError("you have got valid code . Please wait")
 
@@ -98,20 +105,54 @@ class UpdateVerifyCode(APIView):
         return Response(
             {"success": True, "message": "send verify code to your email address"}
         )
-        
+
+
 class UpdateUserView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UpdateUserSerializer
-    
+
     def get_object(self):
         return self.request.user
-    
+
+
 class UploadAvatarView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UploadAvatarSerializer
-    
+
     def get_object(self):
         return self.request.user
+
+
+class LogOutView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data["refresh_token"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(
+                {"success": True, "message": "Successfully logged out."},
+                status=status.HTTP_205_RESET_CONTENT,
+            )
+        except Exception as e:
+            return Response(
+                {"error": "Invalid token or token already blacklisted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self , request):
+        serializer = LoginSerializer(data = request.data)
+        serializer.is_valid(raise_exception=True)
+        user:User = serializer.validated_data['user']
+        
+        token = user.token()
+        
+        return Response({**serializer.data , "tokens" : token})
 
 
 # Create your views here.
