@@ -118,7 +118,7 @@ class UserConfirmation(BaseModel):
     is_confirmed = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ("user", "code")
+        unique_together = ("user", "code" , "is_confirmed")
 
     def save(self, *args, **kwargs):
         if self._state.adding:
