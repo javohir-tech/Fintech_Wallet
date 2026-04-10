@@ -21,7 +21,7 @@ class RegistrationTokenAuthentication(JWTAuthentication):
                 raise AuthenticationFailed("Token ichida user_id yoq")
 
             user: User = User.objects.get(id=user_id)
-            
+
             if user.auth_status != validated_token.get("current_step"):
                 raise AuthenticationFailed("Token yaroqsiz")
             

@@ -29,6 +29,15 @@ from .serializers import (
 # ================ SHARED ================
 from shared.utility import send_email
 
+# =============== TOKENS =================
+from .tokens import RegsitrationToken
+
+# ================ AUTHHORZATIONS ========
+from .authentication import RegistrationTokenAuthentication
+
+# ================ PERMISITIONS ==========
+from .permissions import IsRegistrationToken, CanVerifyCodeSend, CanSetUsernamePasssword
+
 
 class SignUpView(generics.CreateAPIView):
 
@@ -38,8 +47,8 @@ class SignUpView(generics.CreateAPIView):
 
 
 class VerifyCodeView(APIView):
-
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [RegistrationTokenAuthentication]
+    permission_classes = [IsRegistrationToken, CanVerifyCodeSend]
 
     def post(self, request):
         serializer = VerifyCodeSerializer(data=request.data)
@@ -63,14 +72,13 @@ class VerifyCodeView(APIView):
             user_confirmation.is_confirmed = True
             user_confirmation.save(update_fields=["is_confirmed"])
 
-        token = user.token()
+        token = RegsitrationToken.for_user(user)
 
         return Response(
             {
                 "success": True,
                 "data": {
-                    "access_token": token["access_token"],
-                    "refresh_token": token["refresh_token"],
+                    "update_user_token": str(token),
                     "auth_status": AuthStatus.VERIFIED,
                 },
             },
@@ -80,7 +88,8 @@ class VerifyCodeView(APIView):
 
 class UpdateVerifyCode(APIView):
 
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [RegistrationTokenAuthentication]
+    permission_classes = [IsRegistrationToken, CanVerifyCodeSend]
 
     def post(self, request):
 
@@ -110,10 +119,15 @@ class UpdateVerifyCode(APIView):
 
 
 class UpdateUserView(generics.UpdateAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = UpdateUserSerializer(partial=True)
+
+    authentication_classes = [RegistrationTokenAuthentication]
+    permission_classes = [IsRegistrationToken, CanSetUsernamePasssword]
+    serializer_class = UpdateUserSerializer
 
     def get_object(self):
+        print("="*50)
+        print(self.request.user)
+        print("="*50)
         return self.request.user
 
 
@@ -134,6 +148,9 @@ class LogOutView(APIView):
             refresh_token = request.data["refresh_token"]
             token = RefreshToken(refresh_token)
             token.blacklist()
+            user: User = self.request.user
+            user.auth_status = AuthStatus.NEW
+            user.save()
             return Response(
                 {"success": True, "message": "Successfully logged out."},
                 status=status.HTTP_205_RESET_CONTENT,
@@ -167,19 +184,20 @@ class ForgetPasswordView(APIView):
 
         user: User = serializer.validated_data["user"]
 
-        token = user.token()
+        token = RegsitrationToken.for_user(user)
 
         return Response(
             {
                 "success": True,
                 "message": "We have sent you a verification code",
-                "tokens": token,
+                "tokens": str(token),
             }
         )
 
 
 class UpdatePasswordView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [RegistrationTokenAuthentication]
+    permission_classes = [IsRegistrationToken, CanSetUsernamePasssword]
 
     def post(self, request):
         serializer = UpdatePasswordSerializer(data=request.data)
@@ -193,5 +211,6 @@ class UpdatePasswordView(APIView):
             {
                 "success": True,
                 "message": "Password successfuly update",
-            } ,status=status.HTTP_200_OK
+            },
+            status=status.HTTP_200_OK,
         )

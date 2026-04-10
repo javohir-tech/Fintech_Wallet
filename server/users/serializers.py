@@ -21,6 +21,9 @@ from shared.utility import (
 from django.contrib.auth import authenticate
 from django.core.validators import FileExtensionValidator
 
+# =============== TOKENS =================
+from .tokens import RegsitrationToken
+
 
 class SignUpSerializer(serializers.ModelSerializer):
     """
@@ -95,7 +98,8 @@ class SignUpSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data.update(instance.token())
+        token=RegsitrationToken.for_user(instance)
+        data["verify_token"] = str(token)
         return data
 
 

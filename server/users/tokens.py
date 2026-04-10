@@ -4,7 +4,7 @@ from users.models import User, AuthType
 
 class RegsitrationToken(Token):
     
-    token_type = "registration", 
+    token_type = "registration"
     lifetime = timedelta(minutes=15)
     
     @classmethod
