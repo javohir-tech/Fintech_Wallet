@@ -125,9 +125,9 @@ class UpdateUserView(generics.UpdateAPIView):
     serializer_class = UpdateUserSerializer
 
     def get_object(self):
-        print("="*50)
+        print("=" * 50)
         print(self.request.user)
-        print("="*50)
+        print("=" * 50)
         return self.request.user
 
 
